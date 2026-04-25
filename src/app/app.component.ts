@@ -1,27 +1,55 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms'; // Важно для [(ngModel)]
-import { FinanceService } from './services/finance.service'; // Путь к сервису
+import { RouterModule, RouterOutlet } from '@angular/router';
+import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
+import { GlobalInterceptor } from './interceptor';
+import { ApiService } from './services/api.service';
+
+/**
+ * Root App Component
+ *
+ * Responsibilities:
+ * - Bootstrap entire application
+ * - Set up HTTP interceptors globally
+ * - Render navigation sidebar
+ * - Host router outlet for page content
+ * - Manage global app state (if needed)
+ */
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, FormsModule], // Добавляем сюда модули
-  templateUrl: './app.component.html',   // Указывает на твой HTML файл
-  styleUrl: './app.component.scss'
+  imports: [CommonModule, RouterModule, RouterOutlet, HttpClientModule],
+  providers: [
+    ApiService,
+    {
+      provide: HTTP_INTERCEPTORS,
+      useClass: GlobalInterceptor,
+      multi: true,
+    },
+  ],
+  templateUrl: './app.component.html',
+  styleUrl: './app.component.scss',
 })
-export class AppComponent implements OnInit {
-  inputText = signal(''); // Используем Signal для ввода
-  finance = inject(FinanceService); // Внедряем сервис (Dependency Injection)
+export class AppComponent {
+  // Navigation state
+  sidebarOpen = signal(true);
+  currentPage = signal('dashboard');
 
-  ngOnInit() {
-    this.finance.loadHistory(); // Загружаем данные при старте
+  // Navigation items
+  navigationItems = [
+    { label: 'Dashboard', route: '/dashboard', icon: '📊' },
+    { label: 'Transactions', route: '/transactions', icon: '💳' },
+    { label: 'Categories', route: '/categories', icon: '🏷️' },
+    { label: 'Budgets', route: '/budgets', icon: '💰' },
+  ];
+
+  toggleSidebar() {
+    this.sidebarOpen.update((val) => !val);
   }
 
-  submit() {
-    if (this.inputText().trim()) {
-      this.finance.sendText(this.inputText());
-      this.inputText.set(''); // Очищаем поле после отправки
-    }
+  navigate(route: string) {
+    this.currentPage.set(route.split('/')[1] || 'dashboard');
   }
 }
+

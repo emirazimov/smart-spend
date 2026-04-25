@@ -1,37 +1,53 @@
-<div class="main-container">
-  <header>
-    <h1>SmartSpend AI</h1>
-    <p>Твой финансовый помощник на базе FastAPI</p>
-  </header>
+<!-- Main App Layout with Sidebar Navigation -->
+<div class="flex h-screen bg-gray-50">
+  <!-- Sidebar Navigation -->
+  <aside
+    class="bg-white border-r border-gray-200 transition-all duration-300"
+    [class.w-64]="sidebarOpen()"
+    [class.w-0]="!sidebarOpen()">
+    <div class="p-6">
+      <h1 class="text-2xl font-bold text-primary-600">💰 SmartSpend</h1>
+      <p class="text-sm text-gray-500 mt-1">Financial Ecosystem</p>
+    </div>
 
-  <section class="input-section">
-    <input
-      [ngModel]="inputText()"
-      (ngModelChange)="inputText.set($event)"
-      placeholder="Напр: 300 сомов на такси до центра"
-      (keyup.enter)="submit()">
+    <nav class="mt-8">
+      @for (item of navigationItems; track item.route) {
+        <a
+          [routerLink]="item.route"
+          routerLinkActive="bg-primary-50 border-r-4 border-primary-600"
+          class="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-gray-50 transition-colors">
+          <span class="text-xl">{{ item.icon }}</span>
+          <span class="text-sm font-medium" *ngIf="sidebarOpen()">{{ item.label }}</span>
+        </a>
+      }
+    </nav>
+  </aside>
 
-    <button (click)="submit()" [disabled]="!inputText()">
-      Анализировать
-    </button>
-  </section>
-
-  <hr>
-
-  <section class="history-section">
-    <h3>История транзакций:</h3>
-
-    @for (item of finance.transactions(); track item.id) {
-      <div class="transaction-card">
-        <div class="card-info">
-          <span class="amount">{{ item.amount }} {{ item.currency || 'KGS' }}</span>
-          <span class="category">{{ item.category }}</span>
-        </div>
-        <p class="raw-text">"{{ item.text }}"</p>
-        <small class="date">{{ item.date | date:'short' }}</small>
+  <!-- Main Content Area -->
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <!-- Top Header -->
+    <header class="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <button
+          (click)="toggleSidebar()"
+          class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+          <span class="text-2xl">☰</span>
+        </button>
+        <h2 class="text-xl font-semibold text-gray-800">Smart-Spend</h2>
       </div>
-    } @empty {
-      <p>Пока нет записей. Попробуй что-нибудь добавить!</p>
-    }
-  </section>
+
+      <div class="flex items-center gap-4">
+        <span class="text-sm text-gray-600">👤 User</span>
+        <button class="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium">
+          Logout
+        </button>
+      </div>
+    </header>
+
+    <!-- Page Content -->
+    <main class="flex-1 overflow-auto p-8">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
 </div>
+
