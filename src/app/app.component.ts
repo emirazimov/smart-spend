@@ -1,6 +1,6 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, inject, OnInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, RouterOutlet } from '@angular/router';
+import { RouterModule, RouterOutlet, Router } from '@angular/router';
 import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { GlobalInterceptor } from './interceptor';
 import { ApiService } from './services/api.service';
@@ -31,10 +31,13 @@ import { ApiService } from './services/api.service';
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
 })
-export class AppComponent {
+export class AppComponent implements OnInit {
+  private router = inject(Router);
+
   // Navigation state
   sidebarOpen = signal(true);
   currentPage = signal('dashboard');
+  isLoggedIn = signal(false);
 
   // Navigation items
   navigationItems = [
@@ -44,12 +47,29 @@ export class AppComponent {
     { label: 'Budgets', route: '/budgets', icon: '💰' },
   ];
 
+  ngOnInit() {
+    this.checkLoginStatus();
+  }
+
+  checkLoginStatus() {
+    const token = localStorage.getItem('authToken');
+    const userId = localStorage.getItem('userId');
+    this.isLoggedIn.set(!!(token && userId));
+  }
+
   toggleSidebar() {
     this.sidebarOpen.update((val) => !val);
   }
 
   navigate(route: string) {
     this.currentPage.set(route.split('/')[1] || 'dashboard');
+  }
+
+  logout() {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userId');
+    this.isLoggedIn.set(false);
+    this.router.navigate(['/login']);
   }
 }
 

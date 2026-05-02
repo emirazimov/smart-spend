@@ -1,6 +1,6 @@
-import { Component, OnInit, OnDestroy, inject, computed } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ApiService } from '../services/api.service';
+import { ApiService } from './services/api.service';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
@@ -24,10 +24,98 @@ import { takeUntil } from 'rxjs/operators';
       <!-- Header -->
       <div class="flex justify-between items-center">
         <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <button class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
+        <button class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors" (click)="transactionCreationModal()">
           + Add Transaction
         </button>
       </div>
+
+      @if (showModal()) {
+        <div class="fixed inset-0 bg-black bg-opacity-50 z-40" (click)="closeModal()"></div>
+        <div class="fixed inset-0 flex items-center justify-center z-50">
+          <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md" (click)="$event.stopPropagation()">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">
+              asdfasdf
+            </h2>
+
+            <form [formGroup]="transactionForm" (ngSubmit)="saveTransaction()" class="space-y-4">
+              <!-- Amount -->
+              <!-- <div>
+                <label class="text-sm font-medium text-gray-700 block mb-1">Amount *</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  formControlName="amount"
+                  placeholder="0.00"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                @if (transactionForm.get('amount')?.errors?.['required']) {
+                  <p class="text-red-600 text-xs mt-1">Amount is required</p>
+                }
+              </div> -->
+
+              <!-- Category -->
+              <div>
+                <label class="text-sm font-medium text-gray-700 block mb-1">Category *</label>
+                <select
+                  formControlName="category_id"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                  <option value="">Select category</option>
+                  @for (cat of categories(); track cat.id) {
+                    <option [value]="cat.id">{{ cat.name }}</option>
+                  }
+                </select>
+                @if (transactionForm.get('category_id')?.errors?.['required']) {
+                  <p class="text-red-600 text-xs mt-1">Category is required</p>
+                }
+              </div>
+
+              <!-- Description -->
+              <div>
+                <label class="text-sm font-medium text-gray-700 block mb-1">Description</label>
+                <input
+                  type="text"
+                  formControlName="description"
+                  placeholder="What was this for?"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+              </div>
+
+              <!-- Location -->
+              <div>
+                <label class="text-sm font-medium text-gray-700 block mb-1">Location</label>
+                <input
+                  type="text"
+                  formControlName="location"
+                  placeholder="Where did you spend?"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+              </div>
+
+              <!-- Date -->
+              <div>
+                <label class="text-sm font-medium text-gray-700 block mb-1">Date *</label>
+                <input
+                  type="date"
+                  formControlName="transaction_date"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+              </div>
+
+              <!-- Buttons -->
+              <div class="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  (click)="closeModal()"
+                  class="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium">
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  [disabled]="!transactionForm.valid || isSubmitting()"
+                  class="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium disabled:opacity-50">
+                  {{ isSubmitting() ? 'Saving...' : 'Save' }}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      }
 
       <!-- Loading State -->
       @if (isLoading()) {
@@ -85,7 +173,7 @@ import { takeUntil } from 'rxjs/operators';
           <!-- Categories List -->
           <div class="bg-white rounded-lg shadow p-6">
             <h2 class="text-xl font-bold text-gray-900 mb-4">Top Categories</h2>
-            @if (data.top_categories.length > 0) {
+            @if (data.top_categories && data.top_categories.length > 0) {
               <div class="space-y-4">
                 @for (category of data.top_categories; track category.name) {
                   <div>
@@ -105,8 +193,8 @@ import { takeUntil } from 'rxjs/operators';
                   </div>
                 }
               </div>
-            } @empty {
-              <p class="text-gray-500 text-center py-8">No transactions yet</p>
+            } @else {
+              <p class="text-gray-500 text-center py-8">No categories yet</p>
             }
           </div>
 
@@ -168,7 +256,7 @@ import { takeUntil } from 'rxjs/operators';
                 </tbody>
               </table>
             </div>
-          } @empty {
+          } @else {
             <p class="text-gray-500 text-center py-8">No transactions yet</p>
           }
         </div>
@@ -186,10 +274,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
   isLoading = computed(() => this.apiService.isLoading());
   error = computed(() => this.apiService.error());
 
+  showModal = signal(false);
+
   recentTransactions = computed(() => {
     const txs = this.apiService.transactions();
     return txs.slice(0, 5); // Get first 5
   });
+
+transactionCreationModal() {
+    // Placeholder for transaction creation logic
+    alert('Open transaction creation modal');
+    this.showModal.set(true);
+  }
+
+closeModal() {
+    this.showModal.set(false);
+  }
 
   ngOnInit() {
     this.apiService.getDashboardSummary()
